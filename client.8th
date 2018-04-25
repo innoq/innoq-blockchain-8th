@@ -1,0 +1,32 @@
+needs net/http
+
+
+{
+    \ "url": "http://localhost:8081/api/v1/sha256"
+    "url": "http://localhost:8081/blocks"
+
+} var, RESTCONFIG
+
+: >data \ payload -- data
+    {}
+    "data2hash" rot m:!     \ store data
+    "when" d:new >s m:!     \ add timestamp
+;
+
+: >restconfig \ data -- restconfig
+    RESTCONFIG @ "data" rot m:!
+;
+
+: call \ o -- result
+    >data >restconfig net:get 
+    if  json>  else  "shit"  then  
+    nip ;
+
+: test \ --
+    {"a":"b"} "timestamp" d:new >s m:! call . cr
+;
+
+' test 1 times
+.s bye
+
+

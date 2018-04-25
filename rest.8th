@@ -1,0 +1,90 @@
+\ A REST web-server
+\ This is just a sample... don't use it as-is for anything important!
+
+needs net/http
+
+\ Define the server parameters:
+{
+  "port": 8081,
+  "recv": "onRecv",
+  "tls": false
+} var, http-params
+null var, http-server
+
+"HTTP/1.1 200 OK\r\nContent-length: %d\r\nContent-type: application/json\r\n\r\n%s" var, http-header
+
+/(GET|POST)\s+(\S+)\s/ var, get-rx
+
+\ Incoming requests will be like this:
+\ POST /joe HTTP/1.1
+\ Host: 127.0.0.1
+\ User-Agent: 8th
+\ Content-length: 12
+\  
+\ {"a":"xxxx"}
+
+: parse-header \ b -- map verb
+  >s "\r\n" s:/
+  a:shift swap
+  net:split-header swap ;
+
+: >out \ net obj -- net
+  >json s:len http-header @
+  s:strfmt net:write ;
+
+: parse-verb \ s -- a[s]|null
+  get-rx @ r:match not if
+    drop a:new
+  else
+    1 r:@ swap
+    2 r:@  nip
+    2 a:close
+  then ;
+
+
+: v1info \ data -- 
+  >r
+  {"msg": "info", "api" : 1}
+  "data" r> m:! ;
+
+{
+  "/api/v1/info" : ' v1info
+} var, demo-api
+
+demo-api @ var, known-apis
+ 
+
+1 var, serial
+: onRecv
+  \ got a buffer with the headers and the request.  Let's parse out the data:
+  net:split-body 
+
+  swap >s json> >r                    \ push data >r
+
+  parse-header
+  parse-verb
+
+  \ drop what we don't need:
+  nip a:open nip
+  
+  r> \ get back data r> ( uri data )
+
+  \ log something
+  "calling " . over . " with data " . dup . cr
+
+  \ call the appropriate api
+  known-apis @ rot caseof null? if 2drop {"err":"no such api"} then >out
+
+  true ;
+
+: restserve \ known-apis -- 
+  known-apis !
+  http-params @ net:server http-server ! 
+  "Serving REST APIs over HTTP on 8081\n" . 
+  "Available APIs: " . cr
+  known-apis @ ( drop "\t" . . ) m:each drop
+  cr
+;
+
+-- : app:main
+--   demo-api @ restserve ;

@@ -1,0 +1,35 @@
+
+[] var, transactions
+
+
+: +transaction    \ transaction --  
+  "id"        cr:uuid       m:!
+  "timestamp" d:msec        m:!
+  "confirmed" "false"       m:!
+
+  transactions @ swap a:push drop
+;  
+
+: @transaction  \ id -- transaction|null
+  transactions @ swap ( swap "id" m:@ nip s:cmp 0 = ) a:indexof a:@ nip
+;
+
+: confirm \ transaction -- 
+  "confirmed" "true" m:! drop 
+;
+
+: @unconfirmed \ -- []
+  transactions @ ( "confirmed" m:@ nip not ) a:filter 
+;
+
+: sampledata 
+  {"payload":"foo"} +transaction
+  {"payload":"bar"} +transaction
+  {"payload":"xyz"} +transaction
+  {"payload":"123"} +transaction
+;
+sampledata
+
+transactions @ 2 a:@ nip confirm
+
+

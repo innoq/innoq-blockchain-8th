@@ -1,0 +1,82 @@
+"herk/rest.8th" f:include
+"herk/blockhash.8th" f:include
+"herk/genesis.8th" f:include
+"herk/transactions.8th" f:include
+
+{}
+"hash" GENESISHASH @ m:!
+"block" GENESIS @ m:!
+
+[] swap a:push var, blockchain
+
+: @previoushash \ -- previoushash
+    blockchain @ a:len 1 - a:@ "hash" m:@ nip nip
+;
+
+: @chainlen \ -- lengthofchain
+    blockchain @ a:len nip
+;
+
+
+: .blockchain \ -- blocks[]
+    blockchain @ ( "block" m:@ nip ) a:map
+;
+
+
+: pushChain \ hash blockjson -- chainentry
+    json>
+    
+    m:new
+    "block" rot m:!
+    "hash" rot m:!
+    "message" "Hello from 8th" m:!
+
+    dup blockchain @ swap a:push drop       \ push to chain
+;
+
+: blockshandler \ data -- returndata
+    drop                                                \ no input data needed
+
+    {"welcome":"8th"} 
+    "blocks" .blockchain m:!    
+    "blockHeight" @chainlen m:!
+;
+
+: minehandler \ data -- returndata
+    drop                                                \ no input data needed
+    
+    @previoushash @chainlen @unconfirmed mine           \ hash blockjson
+    pushChain
+    @unconfirmed ( nip confirm ) a:each drop            \ confirm all stored to chain
+;
+
+: roothandler \ data -- returndata
+    drop                                                \ no input data needed
+
+    {"nodeId": "8th"}
+    "currentBlockHeight" @chainlen m:!
+;
+
+: transactionshandler \ data -- returndata
+    +transaction
+    @unconfirmed
+;
+
+: unconfirmedtransactionshandler \ data -- returndata
+    drop @unconfirmed
+;
+
+: serve
+    {
+        "/":            ' roothandler ,
+        "/blocks" :     ' blockshandler ,
+        "/mine" :       ' minehandler ,
+        "/transactions": ' transactionshandler ,
+        "/unconfirmedtransactions": ' unconfirmedtransactionshandler
+    }
+    restserve ;
+
+serve
+\ : app:main serve ;
+
+\ curl -X POST http://localhost:8081/transactions -H 'Content-Type: application/json' -d '{"payload": "Arnulf Beckenbauer"}'

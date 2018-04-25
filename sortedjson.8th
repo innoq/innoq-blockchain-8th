@@ -1,0 +1,62 @@
+--
+--
+--
+
+
+: >""   "\"" s:<+ "\"" s:+ ;
+: +:    ":" s:+ ;
+: +,    "," s:+ ;
+
+
+: >key \ key -- "key":
+  >"" +: ;
+
+: sortedkeys \ o -- o []
+  m:keys ' s:cmp a:sort ;
+
+defer: >sortedjson  \ o key -- json
+
+: render-number \ o  -- json
+  >s
+;
+
+: render-string \ o  -- json
+  >""
+;
+
+: ?+, \ index -- 
+  0 > if r> "," s:+ >r then ;
+
+: r<+ 
+  r> s:<+ >r
+;
+
+: render-array  \ a -- json
+  "[" >r  
+  ( swap ?+, >sortedjson r<+ ) a:each
+  drop
+  r> "]" s:+
+;
+
+: render-object \ o -- json
+  "{" >r
+  sortedkeys ( swap ?+, dup >key r<+  m:@ >sortedjson r<+ )  a:each
+  2drop
+  r> "}" s:+
+;
+
+[ 
+  0,
+  0,
+  ' render-number ,       \ ns:n
+  ' render-string ,       \ ns:s
+  ' render-array ,        \ ns:a
+  ' render-object         \ ns:m
+] var, RENDERER
+
+: do-render \ o -- json
+  RENDERER @ over >kind caseof
+;
+
+' do-render w:is >sortedjson
+

@@ -1,0 +1,47 @@
+-- 
+--  hash a block 
+--
+"sha256" cr:hash!     \ configure hashing
+
+"herk/sortedjson.8th" f:include
+
+: newblock \ previousBlockHash index transactions -- block
+
+  m:new
+
+  "proof" "<splithere>"   m:!
+  "timestamp" d:msec      m:!
+  "transactions" rot      m:!
+  "index" rot             m:!
+  "previousBlockHash" rot m:!
+;
+
+var headpart
+var tailpart  
+
+: splitatproof \ o -- 
+  >sortedjson "\"<splithere>\"" s:/
+  0 a:@ headpart !
+  1 a:@ tailpart !
+  drop
+;
+
+: setproof \ n -- json
+  >s
+  headpart @ s:<+ tailpart @ s:+ 
+;
+
+"000000" var, required-lead
+required-lead @ len var, required-len drop
+
+: testproof \ n -- hash flag 
+  setproof cr:hash cr:hash>s dup required-len @ s:lsub required-lead @ s:cmp 0 = 
+;
+
+: mine  \ previousBlockHash index transactions -- hash json
+  newblock splitatproof
+  ( dup testproof if swap setproof break else 2drop then ) 0 2000000000 loop 
+;
+
+
+\ "this is my previousBlockHash" 1 [{"a":1,"confirmed":"false"}] mine . cr . cr 
